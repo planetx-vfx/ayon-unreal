@@ -13,7 +13,7 @@ from ayon_unreal.api.pipeline import UNREAL_VERSION
 from ayon_unreal.api.rendering import (
     SUPPORTED_EXTENSION_MAP,
     get_render_config,
-    set_output_extension_from_settings
+    set_output_extension_from_settings,
 )
 
 
@@ -48,19 +48,19 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
 
         ar = unreal.AssetRegistryHelpers.get_asset_registry()
 
-        sequence = ar.get_asset_by_object_path(
-            data.get("sequence")).get_asset()
+        sequence = ar.get_asset_by_object_path(data.get("sequence")).get_asset()
 
-        sequences = [{
-            "sequence": sequence,
-            "output": data.get("output"),
-            "frame_range": (
-                data.get("frameStart"), data.get("frameEnd"))
-        }]
+        sequences = [
+            {
+                "sequence": sequence,
+                "output": data.get("output"),
+                "frame_range": (data.get("frameStart"), data.get("frameEnd")),
+            }
+        ]
 
         for s in sequences:
             self.log.debug(f"Processing: {s.get('sequence').get_name()}")
-            subscenes = pipeline.get_subsequences(s.get('sequence'))
+            subscenes = pipeline.get_subsequences(s.get("sequence"))
 
             if subscenes:
                 sequences.extend(
@@ -76,14 +76,12 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
                     }
                     for ss in subscenes
                 )
-            elif "_camera" not in s.get('sequence').get_name():
-                seq = s.get('sequence')
+            elif "_camera" not in s.get("sequence").get_name():
+                seq = s.get("sequence")
                 seq_name = seq.get_name()
 
                 new_product_name = f"{data.get('productName')}_{seq_name}"
-                new_instance = context.create_instance(
-                    new_product_name
-                )
+                new_instance = context.create_instance(new_product_name)
                 new_instance[:] = seq_name
 
                 new_data = new_instance.data
@@ -97,10 +95,10 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
                 new_data["families"] = [product_type, "review"]
                 new_data["parent"] = data.get("parent")
                 new_data["level"] = data.get("level")
-                new_data["output"] = s['output']
+                new_data["output"] = s["output"]
                 new_data["fps"] = seq.get_display_rate().numerator
-                new_data["frameStart"] = int(s.get('frame_range')[0])
-                new_data["frameEnd"] = int(s.get('frame_range')[1])
+                new_data["frameStart"] = int(s.get("frame_range")[0])
+                new_data["frameEnd"] = int(s.get("frame_range")[1])
                 new_data["sequence"] = seq.get_path_name()
                 new_data["master_sequence"] = data["master_sequence"]
                 new_data["master_level"] = data["master_level"]
@@ -117,7 +115,7 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
         version = 1  # TODO where to get this without change list
 
         project_name = context.data["projectName"]
-        project_settings = context.data['project_settings']
+        project_settings = context.data["project_settings"]
         render_settings = project_settings["unreal"]["render_setup"]
 
         output_ext_from_settings = render_settings["render_format"]
@@ -140,9 +138,7 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
             )
 
         for inst in context:
-            render_preset =inst.data.get("creator_attributes", {}).get(
-                "render_preset"
-            )
+            render_preset = inst.data.get("creator_attributes", {}).get("render_preset")
             config_path, config = get_render_config(
                 project_name, render_preset, render_settings
             )
@@ -157,9 +153,7 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
 
             ext = self._get_ext_from_config(config)
             if not ext:
-                raise RuntimeError(
-                    "Please provide output extension in config!"
-                )
+                raise RuntimeError("Please provide output extension in config!")
 
             output_settings = config.find_or_add_setting_by_class(
                 unreal.MoviePipelineOutputSetting
@@ -170,7 +164,7 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
             resolution_height = resolution.y
 
             output_fps = output_settings.output_frame_rate
-            fps = f"{output_fps.denominator}.{output_fps.numerator}"
+            fps = round(output_fps.numerator / output_fps.denominator, 3)
 
             instance_families = inst.data.get("families", [])
             product_name = inst.data["productName"]
@@ -198,8 +192,7 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
             self.log.debug(f"Task name:{task_name}")
 
             ar = unreal.AssetRegistryHelpers.get_asset_registry()
-            sequence = (ar.get_asset_by_object_path(inst.data["sequence"]).
-                        get_asset())
+            sequence = ar.get_asset_by_object_path(inst.data["sequence"]).get_asset()
             if not sequence:
                 raise PublishError(f"Cannot find {inst.data['sequence']}")
 
@@ -282,7 +275,7 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
                 folderPath=inst.data["folderPath"],
                 task=task_name,
                 attachTo=False,
-                setMembers='',
+                setMembers="",
                 publish=True,
                 name=product_name,
                 resolutionWidth=resolution_width,
@@ -360,11 +353,12 @@ class CreateFarmRenderInstances(publish.AbstractCollectRender):
         for file_name in render_instance.file_names:
             if "#" in file_name:
                 _spl = file_name.split("#")
-                _len = (len(_spl) - 1)
-                placeholder = "#"*_len
-                for frame in range(start, end+1):
-                    new_file_name = file_name.replace(placeholder,
-                                                      str(frame).zfill(_len))
+                _len = len(_spl) - 1
+                placeholder = "#" * _len
+                for frame in range(start, end + 1):
+                    new_file_name = file_name.replace(
+                        placeholder, str(frame).zfill(_len)
+                    )
                     path = os.path.join(base_dir, new_file_name)
                     expected_files.append(path)
 

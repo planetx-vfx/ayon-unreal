@@ -21,10 +21,7 @@ from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import get_current_project_name
 from ayon_core.pipeline.workfile import get_workfile_template_key
 import ayon_unreal.lib as unreal_lib
-from ayon_unreal.ue_workers import (
-    UEProjectGenerationWorker,
-    UEPluginInstallWorker
-)
+from ayon_unreal.ue_workers import UEProjectGenerationWorker, UEPluginInstallWorker
 from ayon_unreal.ui import SplashScreen
 
 
@@ -37,6 +34,7 @@ class UnrealPrelaunchHook(PreLaunchHook):
     shell script.
 
     """
+
     app_groups = {"unreal"}
     launch_types = {LaunchTypes.local}
     order = -5.1
@@ -72,9 +70,7 @@ class UnrealPrelaunchHook(PreLaunchHook):
             self.host_name,
         )
         # Fill templates
-        template_obj = anatomy.get_template_item(
-            "work", workfile_template_key, "file"
-        )
+        template_obj = anatomy.get_template_item("work", workfile_template_key, "file")
 
         # Return filename
         return template_obj.format_strict(workdir_data)
@@ -92,14 +88,11 @@ class UnrealPrelaunchHook(PreLaunchHook):
         ue_plugin_worker.moveToThread(q_thread)
 
         splash_screen = SplashScreen(
-            "Installing plugin",
-            resources.get_resource("app_icons", "ue4.png")
+            "Installing plugin", resources.get_resource("app_icons", "ue4.png")
         )
 
         # set up the splash screen with necessary triggers
-        ue_plugin_worker.installing.connect(
-            splash_screen.update_top_label_text
-        )
+        ue_plugin_worker.installing.connect(splash_screen.update_top_label_text)
         ue_plugin_worker.progress.connect(splash_screen.update_progress)
         ue_plugin_worker.log.connect(splash_screen.append_log)
         ue_plugin_worker.finished.connect(splash_screen.quit_and_close)
@@ -109,18 +102,20 @@ class UnrealPrelaunchHook(PreLaunchHook):
         splash_screen.show_ui()
 
         if not splash_screen.was_proc_successful():
-            raise ApplicationLaunchFailed("Couldn't run the application! "
-                                          "Plugin failed to install!")
+            raise ApplicationLaunchFailed(
+                "Couldn't run the application! " "Plugin failed to install!"
+            )
 
-    def exec_ue_project_gen(self,
-                            engine_version: str,
-                            unreal_project_name: str,
-                            engine_path: Path,
-                            project_dir: Path):
-        self.log.info((
-            f"{self.signature} Creating unreal "
-            f"project [ {unreal_project_name} ]"
-        ))
+    def exec_ue_project_gen(
+        self,
+        engine_version: str,
+        unreal_project_name: str,
+        engine_path: Path,
+        project_dir: Path,
+    ):
+        self.log.info(
+            (f"{self.signature} Creating unreal " f"project [ {unreal_project_name} ]")
+        )
         if not QtWidgets.QApplication.instance():
             QtWidgets.QApplication(sys.argv)
 
@@ -131,19 +126,16 @@ class UnrealPrelaunchHook(PreLaunchHook):
             self.data["project_name"],
             unreal_project_name,
             engine_path,
-            project_dir
+            project_dir,
         )
         ue_project_worker.moveToThread(q_thread)
         q_thread.started.connect(ue_project_worker.run)
 
         splash_screen = SplashScreen(
-            "Initializing UE project",
-            resources.get_resource("app_icons", "ue4.png")
+            "Initializing UE project", resources.get_resource("app_icons", "ue4.png")
         )
 
-        ue_project_worker.stage_begin.connect(
-            splash_screen.update_top_label_text
-        )
+        ue_project_worker.stage_begin.connect(splash_screen.update_top_label_text)
         ue_project_worker.progress.connect(splash_screen.update_progress)
         ue_project_worker.log.connect(splash_screen.append_log)
         ue_project_worker.finished.connect(splash_screen.quit_and_close)
@@ -153,8 +145,9 @@ class UnrealPrelaunchHook(PreLaunchHook):
         splash_screen.show_ui()
 
         if not splash_screen.was_proc_successful():
-            raise ApplicationLaunchFailed("Couldn't run the application! "
-                                          "Failed to generate the project!")
+            raise ApplicationLaunchFailed(
+                "Couldn't run the application! " "Failed to generate the project!"
+            )
 
     def execute(self):
         """Hook entry method."""
@@ -162,11 +155,16 @@ class UnrealPrelaunchHook(PreLaunchHook):
         executable = str(self.launch_context.executable)
         engine_version = self.app_name.split("/")[-1].replace("-", ".")
         try:
-            if int(engine_version.split(".")[0]) < 4 and \
-                        int(engine_version.split(".")[1]) < 26:
-                raise ApplicationLaunchFailed((
-                    f"{self.signature} Old unsupported version of UE "
-                    f"detected - {engine_version}"))
+            if (
+                int(engine_version.split(".")[0]) < 4
+                and int(engine_version.split(".")[1]) < 26
+            ):
+                raise ApplicationLaunchFailed(
+                    (
+                        f"{self.signature} Old unsupported version of UE "
+                        f"detected - {engine_version}"
+                    )
+                )
         except ValueError:
             # there can be string in minor version and in that case
             # int cast is failing. This probably happens only with
@@ -188,12 +186,14 @@ class UnrealPrelaunchHook(PreLaunchHook):
         # start with non-alpha. We append 'P' before project name to solve it.
         # 😱
         if not unreal_project_name[:1].isalpha():
-            self.log.warning((
-                "Project name doesn't start with alphabet "
-                f"character ({unreal_project_name}). Appending 'P'"
-            ))
+            self.log.warning(
+                (
+                    "Project name doesn't start with alphabet "
+                    f"character ({unreal_project_name}). Appending 'P'"
+                )
+            )
             unreal_project_name = f"P{unreal_project_name}"
-            unreal_project_filename = f'{unreal_project_name}.uproject'
+            unreal_project_filename = f"{unreal_project_name}.uproject"
 
         last_workfile_path = self.data.get("last_workfile_path")
         if last_workfile_path and os.path.exists(last_workfile_path):
@@ -203,10 +203,9 @@ class UnrealPrelaunchHook(PreLaunchHook):
             project_path = Path(os.path.join(workdir, unreal_project_name))
             project_path.mkdir(parents=True, exist_ok=True)
 
-        self.log.info((
-            f"{self.signature} requested UE version: "
-            f"[ {engine_version} ]"
-        ))
+        self.log.info(
+            (f"{self.signature} requested UE version: " f"[ {engine_version} ]")
+        )
 
         # engine_path points to the specific Unreal Engine root
         # so, we are going up from the executable itself 3 levels.
@@ -221,23 +220,28 @@ class UnrealPrelaunchHook(PreLaunchHook):
         # actually contains the plugin. If not, install it.
 
         built_plugin_path = self.launch_context.env.get(
-            "AYON_BUILT_UNREAL_PLUGIN", None)
+            "AYON_BUILT_UNREAL_PLUGIN", None
+        )
 
         if unreal_lib.check_built_plugin_existance(built_plugin_path):
-            self.log.info((
-                f"{self.signature} using existing built Ayon plugin from "
-                f"{built_plugin_path}"
-            ))
+            self.log.info(
+                (
+                    f"{self.signature} using existing built Ayon plugin from "
+                    f"{built_plugin_path}"
+                )
+            )
             unreal_lib.copy_built_plugin(engine_path, Path(built_plugin_path))
         else:
             # Set "AYON_UNREAL_PLUGIN" to current process environment for
             # execution of `create_unreal_project`
             env_key = "AYON_UNREAL_PLUGIN"
             if self.launch_context.env.get(env_key):
-                self.log.info((
-                    f"{self.signature} using Ayon plugin from "
-                    f"{self.launch_context.env.get(env_key)}"
-                ))
+                self.log.info(
+                    (
+                        f"{self.signature} using Ayon plugin from "
+                        f"{self.launch_context.env.get(env_key)}"
+                    )
+                )
             if self.launch_context.env.get(env_key):
                 os.environ[env_key] = self.launch_context.env[env_key]
 
@@ -254,19 +258,16 @@ class UnrealPrelaunchHook(PreLaunchHook):
             current_project = get_current_project_name()
             unreal_settings = get_project_settings(current_project).get("unreal")
             allow_project_creation = unreal_settings["project_setup"].get(
-            "allow_project_creation")
+                "allow_project_creation"
+            )
             # add the project template options
             # add the custom path for the existing project
             if allow_project_creation:
                 existing_uproject_directory = Path(
-                    unreal_settings["project_setup"].get(
-                        "existing_uproject_directory")
+                    unreal_settings["project_setup"].get("existing_uproject_directory")
                 )
                 uproject_files = list(existing_uproject_directory.glob("*.uproject"))
-                if (
-                    existing_uproject_directory.exists() and
-                    uproject_files
-                ):
+                if existing_uproject_directory.exists() and uproject_files:
                     self.copy_project(existing_uproject_directory, project_path)
                     # rename the project folder copied from existing_uproject directory
                     new_project_path = project_path.parent / unreal_project_name
@@ -285,23 +286,28 @@ class UnrealPrelaunchHook(PreLaunchHook):
                     self.set_engine_version(copied_uproject_file, engine_version)
 
                     # rename the copied uproject file to match the expected filename
-                    copied_uproject_file.rename(new_project_path / unreal_project_filename)
-                    self.log.info((
-                        f"{self.signature} Renamed {copied_uproject_file.name} to "
-                        f"{unreal_project_filename}"
-                    ))
+                    copied_uproject_file.rename(
+                        new_project_path / unreal_project_filename
+                    )
+                    self.log.info(
+                        (
+                            f"{self.signature} Renamed {copied_uproject_file.name} to "
+                            f"{unreal_project_filename}"
+                        )
+                    )
                 else:
                     with tempfile.TemporaryDirectory() as temp_dir:
-                        self.exec_ue_project_gen(engine_version,
-                                                 unreal_project_name,
-                                                 engine_path,
-                                                 Path(temp_dir))
+                        self.exec_ue_project_gen(
+                            engine_version,
+                            unreal_project_name,
+                            engine_path,
+                            Path(temp_dir),
+                        )
                         self.copy_project(Path(temp_dir), project_path)
 
             # if the template path has been found with unreal project
             # copy that existing project to ayon work directory
-            elif unreal_settings["project_setup"].get(
-                    "force_existing_project"):
+            elif unreal_settings["project_setup"].get("force_existing_project"):
                 msg = (
                     "Could not open project; Project file not found.\n\n"
                     f"'{project_path.as_posix()}' \n\n"
@@ -315,8 +321,7 @@ class UnrealPrelaunchHook(PreLaunchHook):
                 return
 
         # Append the project file to launch arguments
-        self.launch_context.launch_args.append(
-            f"\"{project_file.as_posix()}\"")
+        self.launch_context.launch_args.append(f'"{project_file.as_posix()}"')
 
     def set_engine_version(self, uproject_path: Path, new_version: str):
         """Set the engine version in a Unreal project file.
@@ -344,9 +349,7 @@ class UnrealPrelaunchHook(PreLaunchHook):
 
         uproject_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
 
-        self.log.info(
-            f"Engine version set to '{new_version}' for {uproject_path}"
-        )
+        self.log.info(f"Engine version set to '{new_version}' for {uproject_path}")
 
     def copy_project(self, source: Path, destination: Path):
         """Copy an Unreal project directory.
@@ -356,12 +359,10 @@ class UnrealPrelaunchHook(PreLaunchHook):
             destination (Path): The destination directory.
         """
         try:
-            self.log.info((
-                f"Moving from {source.as_posix()} to "
-                f"{destination.as_posix()}"
-            ))
-            shutil.copytree(
-                source, destination, dirs_exist_ok=True)
+            self.log.info(
+                (f"Moving from {source.as_posix()} to " f"{destination.as_posix()}")
+            )
+            shutil.copytree(source, destination, dirs_exist_ok=True)
 
         except shutil.Error as e:
             msg = (
